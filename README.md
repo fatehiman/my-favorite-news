@@ -55,7 +55,7 @@ php artisan key:generate
 Edit `.env` and set:
 
 ```
-ADMIN_EMAIL=you@example.com
+ADMIN_USERNAME=choose-a-username
 ADMIN_PASSWORD=choose-a-strong-password
 ```
 
@@ -66,7 +66,8 @@ php artisan migrate --seed   # creates the admin user + seeds the 21 feeds
 php artisan serve            # local dev server
 ```
 
-Log in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`.
+Log in with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env` (login is by
+username, not email).
 
 ## Fetching news
 

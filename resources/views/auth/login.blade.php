@@ -15,8 +15,8 @@
     <form method="POST" action="{{ route('login.submit') }}" class="space-y-4">
         @csrf
         <div>
-            <label class="block text-sm mb-1">Email</label>
-            <input type="email" name="email" value="{{ old('email') }}" required autofocus
+            <label class="block text-sm mb-1">Username</label>
+            <input type="text" name="username" value="{{ old('username') }}" required autofocus
                    class="w-full border rounded-md px-3 py-2">
         </div>
         <div>

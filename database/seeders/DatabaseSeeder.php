@@ -8,25 +8,25 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the single admin account from ADMIN_EMAIL / ADMIN_PASSWORD in .env.
+     * Seed the single admin account from ADMIN_USERNAME / ADMIN_PASSWORD in .env.
      */
     public function run(): void
     {
-        $email = env('ADMIN_EMAIL');
+        $username = env('ADMIN_USERNAME');
         $password = env('ADMIN_PASSWORD');
 
-        if (! $email || ! $password) {
-            $this->command->warn('ADMIN_EMAIL / ADMIN_PASSWORD not set in .env — skipping admin user creation.');
+        if (! $username || ! $password) {
+            $this->command->warn('ADMIN_USERNAME / ADMIN_PASSWORD not set in .env — skipping admin user creation.');
 
             return;
         }
 
         User::updateOrCreate(
-            ['email' => $email],
-            ['name' => 'Admin', 'password' => $password]
+            ['username' => $username],
+            ['name' => 'Admin', 'email' => $username.'@local', 'password' => $password]
         );
 
-        $this->command->info("Admin user ready: {$email}");
+        $this->command->info("Admin user ready: {$username}");
 
         $this->call(FeedSeeder::class);
     }
