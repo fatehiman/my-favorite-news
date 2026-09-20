@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Article extends Model
 {
@@ -18,17 +19,17 @@ class Article extends Model
         'url',
         'guid',
         'description',
+        'content',
+        'translation_fa',
+        'translated_at',
         'published_at',
         'is_read',
-        'is_favorite',
-        'is_deleted',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
+        'translated_at' => 'datetime',
         'is_read' => 'boolean',
-        'is_favorite' => 'boolean',
-        'is_deleted' => 'boolean',
     ];
 
     public function feed(): BelongsTo
@@ -39,5 +40,10 @@ class Article extends Model
     public function cluster(): BelongsTo
     {
         return $this->belongsTo(ArticleCluster::class, 'article_cluster_id');
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class);
     }
 }

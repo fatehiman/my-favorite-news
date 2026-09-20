@@ -1,35 +1,72 @@
 # My Favorite News
 
 A small, personal news aggregator. It fetches RSS feeds from several news
-sources every day, and flags a story as **important** when the same story
-shows up in 2 or more different sources. You get one simple "briefing" page
-instead of checking many news sites.
+sources every 4 hours, and flags a story as **important** when the same
+story shows up in 2 or more different outlets. You get one simple
+"briefing" page instead of checking many news sites.
 
 ## Features
 
-- Fetches RSS/Atom feeds on a daily schedule (default 9:00 AM).
-- Detects duplicate stories across sources using plain text similarity
-  (word overlap on the title) — no AI, no API cost.
-- Marks a story cluster "important" once 2+ different sources report it.
+- Fetches RSS/Atom feeds every 4 hours (00:00, 04:00, 08:00, 12:00, 16:00,
+  20:00), plus a manual "Fetch now" button in the panel.
+- Detects duplicate stories across **outlets** (not just RSS feeds — see
+  below) using plain text similarity on the title — no AI, no API cost.
+- Marks a story cluster "important" once 2+ different outlets report it;
+  hovering the ⭐ badge shows which outlets.
+- Pulls full article body when a feed actually provides one (`content:encoded`,
+  common on WordPress-based feeds); a "Read here" button opens it in a
+  scrollable modal, no images. Many outlets (NPR, NBC, CBS, ABC) only publish
+  a short teaser in their feed — for those, the modal says so and links out.
+- "Translate to Persian" button in that modal, via DeepSeek (capped at
+  10/day — see below), cached per article so re-opening doesn't recount.
+- Tags parsed straight from each feed's `<category>` elements, shown as chips
+  under each article. Click "+"/"−" on a chip to include/exclude that tag.
+- **Favorites** = a live filter, not a saved list: articles that have at
+  least one *included* tag and none of the *excluded* tags (set in Settings
+  or via the chip buttons). Change the tags and Favorites updates immediately
+  — nothing to "reprocess".
 - One simple login (single admin account, no public registration).
-- Briefing page: filter by category (politics / economy / IT), show only
-  important stories, show only favorites, mark read, remove.
-- Settings page: hide whole categories from your default briefing.
+- Automatic cleanup: articles older than 10 days (by publish date, not fetch
+  date) are deleted every fetch cycle. There's no manual delete — if you
+  don't want to read something, just don't click it and move on.
+- Settings page: hide whole categories from your default briefing, manage
+  included/excluded tags.
 - Feed manager: add / edit / pause / delete RSS feeds from the panel.
 
 ## How duplicate detection works
 
 `app/Services/DuplicateDetectorService.php` normalizes each title (lowercase,
 strips punctuation and common stop-words), then compares it to other
-articles from **different feeds** published within 48 hours using a
-word-overlap ratio (Jaccard similarity, threshold 0.55). Matching articles
-share an `article_clusters` row; once that cluster has articles from 2+
-distinct feeds, it's flagged `is_important`.
+articles from a **different outlet** (by feed *name*, not feed row — so the
+same outlet's politics feed and economy feed carrying the same story doesn't
+falsely count as 2 sources) published within 48 hours, using a word-overlap
+ratio (Jaccard similarity, threshold 0.55). Matching articles share an
+`article_clusters` row; once that cluster has 2+ distinct outlets, it's
+flagged `is_important`.
 
 This is intentionally simple and free to run. It will miss duplicates that
 are worded very differently. If that becomes a problem, `RssFetcherService`
 and `DuplicateDetectorService` are the two files to extend — e.g. swapping in
 an LLM-based similarity check for the ones that don't match by words alone.
+
+## Translation (DeepSeek)
+
+Set `DEEPSEEK_API_KEY` in `.env`. `app/Http/Controllers/TranslationController.php`
+caps usage at 10 translations/day (tracked in the cache, resets at midnight)
+and caches each article's translation permanently once made, so revisiting an
+already-translated article is free. If the key is missing, the button just
+returns an error instead of failing the whole page.
+
+## Tags and Favorites
+
+Tags come from whatever each feed's `<category>` elements contain — quality
+varies by source (some are clean topics like "politics", others are internal
+taxonomy slugs). Settings → "Favorites — included/excluded tags" holds two
+comma-separated lists (`included_tags` / `excluded_tags` in the `settings`
+table, as JSON). The Favorites tab query is: has a tag in the included list,
+and has no tag in the excluded list. If the included list is empty, Favorites
+shows nothing (there's nothing to ask for yet) — the page tells you this and
+links to Settings.
 
 ## Seeded RSS feeds
 
@@ -57,6 +94,7 @@ Edit `.env` and set:
 ```
 ADMIN_USERNAME=choose-a-username
 ADMIN_PASSWORD=choose-a-strong-password
+DEEPSEEK_API_KEY=            # optional — only needed for the translate button
 ```
 
 Then:
@@ -72,20 +110,26 @@ username, not email).
 ## Fetching news
 
 ```bash
-php artisan news:fetch
+php artisan news:fetch     # fetch all feeds, dedup, then runs news:cleanup
+php artisan news:cleanup   # delete articles older than 10 days on their own
 ```
 
-This is scheduled daily at 9:00 AM in `routes/console.php`. In production, a
-single cron entry drives Laravel's scheduler:
+`news:fetch` is scheduled every 4 hours in `routes/console.php`, plus a
+minute-granularity check for the "Fetch now" button (it sets a cache flag;
+the next scheduler tick, within ~1 minute, picks it up and runs the fetch —
+no separate background worker needed). In production, a single cron entry
+drives all of this:
 
 ```
 * * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1
 ```
 
-## Changing the fetch time or adding feeds
+## Changing the fetch schedule, retention, or feeds
 
-- Fetch time: edit `Schedule::command('news:fetch')->dailyAt('09:00')` in
-  `routes/console.php`.
+- Fetch schedule: edit the `Schedule::command('news:fetch')->cron(...)` line
+  in `routes/console.php`.
+- Retention window: `RETENTION_DAYS` constant in
+  `app/Console/Commands/CleanupOldArticles.php`.
 - Feeds: use the Feeds panel in the app, or edit
   `database/seeders/FeedSeeder.php` and re-run `php artisan db:seed --class=FeedSeeder`.
 

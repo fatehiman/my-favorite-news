@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'My Favorite News')</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -33,5 +34,68 @@
 
         @yield('content')
     </main>
+
+    @auth
+    <dialog id="article-modal" class="rounded-lg p-0 w-full max-w-lg backdrop:bg-black/40">
+        <div class="p-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-start gap-3 mb-2">
+                <h2 id="modal-title" class="font-semibold text-lg"></h2>
+                <button type="button" onclick="document.getElementById('article-modal').close()"
+                        class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
+            </div>
+            <div id="modal-body" class="text-sm text-gray-700 whitespace-pre-line"></div>
+
+            <div class="mt-4 border-t pt-3">
+                <button type="button" id="translate-btn" class="text-sm text-blue-600 hover:underline">
+                    Translate to Persian
+                </button>
+                <div id="modal-translation" class="mt-2 text-sm text-gray-800" dir="rtl" lang="fa"></div>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+        let currentArticleId = null;
+
+        function openArticle(id, title) {
+            currentArticleId = id;
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').textContent = 'Loading…';
+            document.getElementById('modal-translation').textContent = '';
+            document.getElementById('article-modal').showModal();
+
+            fetch(`/articles/${id}/content`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('modal-body').textContent = data.content || data.message;
+                })
+                .catch(() => {
+                    document.getElementById('modal-body').textContent = 'Could not load the article.';
+                });
+        }
+
+        document.getElementById('translate-btn').addEventListener('click', () => {
+            if (!currentArticleId) return;
+            const el = document.getElementById('modal-translation');
+            el.textContent = 'Translating…';
+
+            fetch(`/articles/${currentArticleId}/translate`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN,
+                    'Accept': 'application/json',
+                },
+            })
+                .then(r => r.json())
+                .then(data => {
+                    el.textContent = data.translation || data.message || 'Translation failed.';
+                })
+                .catch(() => {
+                    el.textContent = 'Could not reach the translation service.';
+                });
+        });
+    </script>
+    @endauth
 </body>
 </html>

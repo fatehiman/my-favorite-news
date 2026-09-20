@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Article;
 use App\Models\Feed;
+use App\Models\Tag;
 use App\Services\DuplicateDetectorService;
 use App\Services\RssFetcherService;
 use Illuminate\Console\Command;
@@ -42,10 +43,18 @@ class FetchNews extends Command
                     'url' => $item['url'],
                     'guid' => $item['guid'],
                     'description' => $item['description'],
+                    'content' => $item['content'] ?? null,
                     'published_at' => $item['published_at'],
                 ]);
 
                 $duplicates->assignCluster($article);
+
+                if (! empty($item['tags'])) {
+                    $tagIds = collect($item['tags'])
+                        ->map(fn ($name) => Tag::findOrCreateByName($name)->id);
+
+                    $article->tags()->sync($tagIds);
+                }
 
                 $newForFeed++;
             }
@@ -57,6 +66,8 @@ class FetchNews extends Command
         }
 
         $this->info("Done. {$totalNew} new articles fetched.");
+
+        $this->call('news:cleanup');
 
         return self::SUCCESS;
     }

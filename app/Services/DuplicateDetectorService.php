@@ -52,21 +52,25 @@ class DuplicateDetectorService
             return;
         }
 
+        // "!= feed_id" isn't enough — the same outlet often runs the same story in two of
+        // its own category feeds (e.g. Washington Examiner's politics AND economy feed).
+        // That's not independent corroboration, so match by outlet NAME, not feed row.
         $candidates = Article::query()
-            ->whereNotNull('article_cluster_id')
-            ->where('feed_id', '!=', $article->feed_id)
-            ->where('id', '!=', $article->id)
+            ->join('feeds', 'feeds.id', '=', 'articles.feed_id')
+            ->whereNotNull('articles.article_cluster_id')
+            ->where('feeds.name', '!=', $article->feed->name)
+            ->where('articles.id', '!=', $article->id)
             ->when($article->published_at, function ($query) use ($article) {
-                $query->whereBetween('published_at', [
+                $query->whereBetween('articles.published_at', [
                     $article->published_at->copy()->subHours(self::TIME_WINDOW_HOURS),
                     $article->published_at->copy()->addHours(self::TIME_WINDOW_HOURS),
                 ]);
             }, function ($query) {
-                $query->where('created_at', '>=', Carbon::now()->subHours(self::TIME_WINDOW_HOURS));
+                $query->where('articles.created_at', '>=', Carbon::now()->subHours(self::TIME_WINDOW_HOURS));
             })
-            ->orderByDesc('published_at')
+            ->orderByDesc('articles.published_at')
             ->limit(300)
-            ->get(['id', 'normalized_title', 'article_cluster_id']);
+            ->get(['articles.id', 'articles.normalized_title', 'articles.article_cluster_id']);
 
         foreach ($candidates as $candidate) {
             $wordsB = array_filter(explode(' ', $candidate->normalized_title));
@@ -110,7 +114,11 @@ class DuplicateDetectorService
         $article->update(['article_cluster_id' => $clusterId]);
 
         $cluster = ArticleCluster::find($clusterId);
-        $sourcesCount = Article::where('article_cluster_id', $clusterId)->distinct('feed_id')->count('feed_id');
+        $sourcesCount = Article::query()
+            ->join('feeds', 'feeds.id', '=', 'articles.feed_id')
+            ->where('articles.article_cluster_id', $clusterId)
+            ->distinct('feeds.name')
+            ->count('feeds.name');
 
         $cluster->update([
             'sources_count' => $sourcesCount,
