@@ -21,9 +21,10 @@ class ArticleController extends Controller
         $activeCategory = $request->query('category');
         $showFavoritesOnly = $request->boolean('favorites');
         $showImportantOnly = $request->boolean('important');
+        $showUnreadOnly = $request->boolean('unread');
 
         $query = Article::query()
-            ->with(['feed', 'tags', 'cluster.articles.feed'])
+            ->with(['feed', 'tags', 'cluster.articles.feed', 'cluster.articles.tags'])
             ->whereRaw($this->oneArticlePerClusterSql())
             ->whereHas('feed', function ($q) use ($hiddenCategories, $activeCategory) {
                 if ($activeCategory) {
@@ -56,6 +57,10 @@ class ArticleController extends Controller
             $query->whereHas('cluster', fn ($q) => $q->where('is_important', true));
         }
 
+        if ($showUnreadOnly) {
+            $query->where('is_read', false);
+        }
+
         $articles = $query->paginate(30)->withQueryString();
 
         return view('articles.index', [
@@ -67,6 +72,7 @@ class ArticleController extends Controller
             'activeCategory' => $activeCategory,
             'showFavoritesOnly' => $showFavoritesOnly,
             'showImportantOnly' => $showImportantOnly,
+            'showUnreadOnly' => $showUnreadOnly,
             'lastFetchedAt' => ($max = Feed::max('last_fetched_at')) ? \Illuminate\Support\Carbon::parse($max) : null,
         ]);
     }
@@ -116,9 +122,13 @@ class ArticleController extends Controller
             ->where('description', 'not like', "%{$term}%");
     }
 
-    public function markRead(Article $article): RedirectResponse
+    public function markRead(Request $request, Article $article): RedirectResponse|JsonResponse
     {
         $article->update(['is_read' => true]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
 
         return back();
     }

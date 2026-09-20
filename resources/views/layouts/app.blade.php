@@ -147,6 +147,48 @@
                     alert('Could not reach the translation service.');
                 });
         }
+
+        // AJAX so reading down a long list never reloads the page and loses your scroll spot.
+        function markReadAjax(id) {
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.classList.add('opacity-60');
+
+            const btn = document.getElementById(`mark-read-btn-${id}`);
+            if (btn) btn.remove();
+
+            fetch(`/articles/${id}/read`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+            }).catch(() => {});
+        }
+
+        function setTagAjax(name, action, btn) {
+            fetch('/tags/set', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, action }),
+            })
+                .then(r => r.json())
+                .then(() => {
+                    document.querySelectorAll(`[data-tag-name="${name.replace(/"/g, '\\"')}"]`).forEach(el => {
+                        el.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700', 'bg-gray-100', 'text-gray-600');
+                        if (action === 'include') {
+                            el.classList.add('bg-green-100', 'text-green-700');
+                        } else if (action === 'exclude') {
+                            el.classList.add('bg-red-100', 'text-red-700');
+                        } else {
+                            el.classList.add('bg-gray-100', 'text-gray-600');
+                        }
+                    });
+                })
+                .catch(() => {
+                    alert('Could not save that — try again.');
+                });
+        }
     </script>
     @endauth
 </body>

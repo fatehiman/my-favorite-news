@@ -14,7 +14,11 @@ story shows up in 2 or more different outlets. You get one simple
 - Marks a story cluster "important" once 2+ different outlets report it;
   hovering the ⭐ badge shows which outlets. Important is a **toggle**, top
   right of the tabs — it combines with whichever tab is active (All, a
-  category, or Favorites), it's not its own separate tab.
+  category, or Favorites), it's not its own separate tab. A tag/keyword's
+  chips still show on cards while Important is on, even without switching to
+  Favorites, so you can build up your included/excluded list as you browse.
+- **Unread** toggle (●), left of Important — same combining behavior, so
+  "Important + Unread" (or any other combo) works together.
 - Pulls full article body when a feed actually provides one (`content:encoded`,
   common on WordPress-based feeds); a "Read here" button opens it in a
   scrollable modal, no images. Many outlets (NPR, NBC, CBS, ABC) only publish
@@ -22,8 +26,9 @@ story shows up in 2 or more different outlets. You get one simple
 - Translate to Persian: a 🌐 button on every card translates the title +
   summary in place (RTL) — click again to revert. A separate "Translate to
   Persian" button in the "Read here" modal translates the full body. Both go
-  through DeepSeek, share one 10/day cap (see below), and cache their result
-  per article so re-translating is free.
+  through DeepSeek and cache their result per article so re-translating is
+  free. No daily cap — this is a single-user app, so DeepSeek usage is left
+  uncapped; keep an eye on your own DeepSeek billing if that matters to you.
 - Tags parsed straight from each feed's `<category>` elements, shown as chips
   under each article. Click "+"/"−" on a chip to include/exclude that tag.
 - A dedicated **Tags** page lists included/excluded tags (with a one-click
@@ -71,12 +76,12 @@ an LLM-based similarity check for the ones that don't match by words alone.
 ## Translation (DeepSeek)
 
 Set `DEEPSEEK_API_KEY` in `.env`. `app/Http/Controllers/TranslationController.php`
-caps usage at 10 translations/day total across both the card 🌐 button and the
-modal's full-body button (tracked in the cache, resets at midnight), and
 caches each result permanently once made (`articles.title_fa`/`description_fa`
 for the card, `translation_fa` for the full body), so revisiting an
-already-translated article is free. If the key is missing, the button just
-returns an error instead of failing the whole page.
+already-translated article is free and doesn't call the API again. If the
+key is missing, the button just returns an error instead of failing the
+whole page. There's no usage cap — add one back in this controller if that's
+ever wanted.
 
 ## Tags and Favorites
 
@@ -96,6 +101,17 @@ it's matched by substring search, not just the feed's own tag metadata.
 The Favorites tab query is: matches an included term, and matches no
 excluded term. If the included list is empty, Favorites shows nothing
 (there's nothing to ask for yet) — the page tells you this and links to Tags.
+
+Tag chips on a card show tags pooled from **every article in that story's
+cluster**, not just the one shown (`Article::getAllTagsAttribute()`). Only
+3 of the 7 seeded sources (Fox News, Fox Business, Washington Examiner)
+supply RSS `<category>` data — without pooling, a cluster whose chosen
+representative happened to be NBC/CBS/ABC/NPR/The Hill would show no tags
+at all, even though a Fox member of the same cluster had some.
+
+Mark-read, the 🌐 translate button, and the tag chip +/− buttons are all
+AJAX (`fetch`, no page reload) — clicking any of them while scrolled deep
+into a long list doesn't reset your scroll position.
 
 ## Seeded RSS feeds
 

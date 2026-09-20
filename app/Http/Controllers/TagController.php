@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use App\Models\Tag;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -30,7 +31,7 @@ class TagController extends Controller
      * name), which Favorites matches against article text, not just the
      * feed-supplied <category> tags.
      */
-    public function setTag(Request $request): RedirectResponse
+    public function setTag(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -51,6 +52,10 @@ class TagController extends Controller
 
         Setting::setJson('included_tags', $included->unique()->values()->all());
         Setting::setJson('excluded_tags', $excluded->unique()->values()->all());
+
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true, 'name' => $name, 'action' => $action]);
+        }
 
         return back()->with('status', match ($action) {
             'include' => "\"{$name}\" added to Favorites (included).",

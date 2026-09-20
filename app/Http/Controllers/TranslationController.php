@@ -4,14 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TranslationController extends Controller
 {
-    private const DAILY_LIMIT = 10;
-
     /**
      * Full-body translation, shown in the "Read here" modal.
      */
@@ -21,8 +18,8 @@ class TranslationController extends Controller
             return response()->json(['translation' => $article->translation_fa]);
         }
 
-        if ($error = $this->checkQuotaAndConfig()) {
-            return $error;
+        if (! config('services.deepseek.api_key')) {
+            return response()->json(['message' => 'Translation is not configured (missing DEEPSEEK_API_KEY).'], 500);
         }
 
         $text = $article->content ?: $article->description;
@@ -37,7 +34,6 @@ class TranslationController extends Controller
         }
 
         $article->update(['translation_fa' => $translation, 'translated_at' => now()]);
-        $this->consumeQuota();
 
         return response()->json(['translation' => $translation]);
     }
@@ -51,8 +47,8 @@ class TranslationController extends Controller
             return response()->json(['title' => $article->title_fa, 'description' => $article->description_fa]);
         }
 
-        if ($error = $this->checkQuotaAndConfig()) {
-            return $error;
+        if (! config('services.deepseek.api_key')) {
+            return response()->json(['message' => 'Translation is not configured (missing DEEPSEEK_API_KEY).'], 500);
         }
 
         $raw = $this->callDeepSeek(
@@ -77,36 +73,8 @@ class TranslationController extends Controller
             'title_fa' => $parsed['title'],
             'description_fa' => $parsed['description'] ?? null,
         ]);
-        $this->consumeQuota();
 
         return response()->json(['title' => $parsed['title'], 'description' => $parsed['description'] ?? null]);
-    }
-
-    private function checkQuotaAndConfig(): ?JsonResponse
-    {
-        $used = Cache::get($this->usageKey(), 0);
-
-        if ($used >= self::DAILY_LIMIT) {
-            return response()->json([
-                'message' => 'Daily translation limit ('.self::DAILY_LIMIT.') reached. Try again after midnight.',
-            ], 429);
-        }
-
-        if (! config('services.deepseek.api_key')) {
-            return response()->json(['message' => 'Translation is not configured (missing DEEPSEEK_API_KEY).'], 500);
-        }
-
-        return null;
-    }
-
-    private function consumeQuota(): void
-    {
-        Cache::put($this->usageKey(), Cache::get($this->usageKey(), 0) + 1, now()->endOfDay());
-    }
-
-    private function usageKey(): string
-    {
-        return 'translations_used_'.now()->toDateString();
     }
 
     /**

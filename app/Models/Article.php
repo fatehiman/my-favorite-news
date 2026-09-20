@@ -48,4 +48,23 @@ class Article extends Model
     {
         return $this->belongsToMany(Tag::class);
     }
+
+    /**
+     * Tags are attached per feed row, but only ~3 of our sources actually supply
+     * RSS <category> data. When this article is the representative of a cluster,
+     * show tags pooled from every member — a story a Fox feed tagged shouldn't
+     * lose its tags just because the shown card happens to be the NBC copy.
+     * Requires 'cluster.articles.tags' to be eager-loaded to avoid N+1 queries.
+     */
+    public function getAllTagsAttribute()
+    {
+        if (! $this->article_cluster_id || ! $this->relationLoaded('cluster') || ! $this->cluster) {
+            return $this->tags;
+        }
+
+        return $this->cluster->articles
+            ->flatMap(fn ($article) => $article->tags)
+            ->unique('id')
+            ->values();
+    }
 }
