@@ -15,6 +15,7 @@
             <div class="flex items-center gap-4 text-sm">
                 <a href="{{ route('articles.index') }}" class="hover:underline">Briefing</a>
                 <a href="{{ route('feeds.index') }}" class="hover:underline">Feeds</a>
+                <a href="{{ route('tags.index') }}" class="hover:underline">Tags</a>
                 <a href="{{ route('settings.edit') }}" class="hover:underline">Settings</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -95,6 +96,57 @@
                     el.textContent = 'Could not reach the translation service.';
                 });
         });
+
+        function translateCard(id, btn) {
+            const titleEl = document.getElementById(`title-${id}`);
+            const descEl = document.getElementById(`desc-${id}`);
+
+            if (btn.dataset.translated === 'true') {
+                titleEl.textContent = titleEl.dataset.original;
+                titleEl.removeAttribute('dir');
+                if (descEl) {
+                    descEl.textContent = descEl.dataset.original;
+                    descEl.removeAttribute('dir');
+                }
+                btn.textContent = '🌐';
+                btn.title = 'Translate to Persian';
+                btn.dataset.translated = 'false';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '…';
+
+            fetch(`/articles/${id}/translate-card`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+            })
+                .then(r => r.json())
+                .then(data => {
+                    btn.disabled = false;
+                    if (!data.title) {
+                        btn.textContent = '🌐';
+                        alert(data.message || 'Translation failed.');
+                        return;
+                    }
+                    titleEl.dataset.original = titleEl.textContent;
+                    titleEl.textContent = data.title;
+                    titleEl.setAttribute('dir', 'rtl');
+                    if (descEl) {
+                        descEl.dataset.original = descEl.textContent;
+                        descEl.textContent = data.description || descEl.textContent;
+                        descEl.setAttribute('dir', 'rtl');
+                    }
+                    btn.textContent = '↩';
+                    btn.title = 'Show original';
+                    btn.dataset.translated = 'true';
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.textContent = '🌐';
+                    alert('Could not reach the translation service.');
+                });
+        }
     </script>
     @endauth
 </body>

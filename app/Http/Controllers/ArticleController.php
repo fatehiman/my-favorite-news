@@ -37,11 +37,17 @@ class ArticleController extends Controller
             if (empty($includedTags)) {
                 $query->whereRaw('0 = 1');
             } else {
-                $query->whereHas('tags', fn ($q) => $q->whereIn('name', $includedTags));
+                $query->where(function ($q) use ($includedTags) {
+                    foreach ($includedTags as $term) {
+                        $this->orMatchesTerm($q, $term);
+                    }
+                });
             }
 
-            if (! empty($excludedTags)) {
-                $query->whereDoesntHave('tags', fn ($q) => $q->whereIn('name', $excludedTags));
+            foreach ($excludedTags as $term) {
+                $query->where(function ($q) use ($term) {
+                    $this->whereDoesntMatchTerm($q, $term);
+                });
             }
         }
 
@@ -62,6 +68,25 @@ class ArticleController extends Controller
             'showImportantOnly' => $showImportantOnly,
             'lastFetchedAt' => ($max = Feed::max('last_fetched_at')) ? \Illuminate\Support\Carbon::parse($max) : null,
         ]);
+    }
+
+    /**
+     * A term matches an article if it's one of the article's real tags (from the
+     * feed's <category> data), OR appears as text in the title/description — this
+     * lets a manually-added keyword (a person's or country's name) work too.
+     */
+    private function orMatchesTerm($query, string $term): void
+    {
+        $query->orWhereHas('tags', fn ($q) => $q->where('name', $term))
+            ->orWhere('title', 'like', "%{$term}%")
+            ->orWhere('description', 'like', "%{$term}%");
+    }
+
+    private function whereDoesntMatchTerm($query, string $term): void
+    {
+        $query->whereDoesntHave('tags', fn ($q) => $q->where('name', $term))
+            ->where('title', 'not like', "%{$term}%")
+            ->where('description', 'not like', "%{$term}%");
     }
 
     public function markRead(Article $article): RedirectResponse

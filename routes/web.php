@@ -4,6 +4,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\TranslationController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,12 +20,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/articles/{article}/read', [ArticleController::class, 'markRead'])->name('articles.read');
     Route::get('/articles/{article}/content', [ArticleController::class, 'content'])->name('articles.content');
     Route::post('/articles/{article}/translate', [TranslationController::class, 'translate'])->name('articles.translate');
+    Route::post('/articles/{article}/translate-card', [TranslationController::class, 'translateCard'])->name('articles.translate-card');
 
     Route::resource('feeds', FeedController::class)->except(['show']);
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
-    Route::post('/settings/tags/{tag}/{action}', [SettingController::class, 'setTag'])
-        ->name('settings.tags.set')
-        ->where('action', 'include|exclude|clear');
+
+    Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+    Route::post('/tags/set', [TagController::class, 'setTag'])->name('tags.set');
 });

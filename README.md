@@ -12,25 +12,33 @@ story shows up in 2 or more different outlets. You get one simple
 - Detects duplicate stories across **outlets** (not just RSS feeds — see
   below) using plain text similarity on the title — no AI, no API cost.
 - Marks a story cluster "important" once 2+ different outlets report it;
-  hovering the ⭐ badge shows which outlets.
+  hovering the ⭐ badge shows which outlets. Important is a **toggle**, top
+  right of the tabs — it combines with whichever tab is active (All, a
+  category, or Favorites), it's not its own separate tab.
 - Pulls full article body when a feed actually provides one (`content:encoded`,
   common on WordPress-based feeds); a "Read here" button opens it in a
   scrollable modal, no images. Many outlets (NPR, NBC, CBS, ABC) only publish
   a short teaser in their feed — for those, the modal says so and links out.
-- "Translate to Persian" button in that modal, via DeepSeek (capped at
-  10/day — see below), cached per article so re-opening doesn't recount.
+- Translate to Persian: a 🌐 button on every card translates the title +
+  summary in place (RTL) — click again to revert. A separate "Translate to
+  Persian" button in the "Read here" modal translates the full body. Both go
+  through DeepSeek, share one 10/day cap (see below), and cache their result
+  per article so re-translating is free.
 - Tags parsed straight from each feed's `<category>` elements, shown as chips
   under each article. Click "+"/"−" on a chip to include/exclude that tag.
-- **Favorites** = a live filter, not a saved list: articles that have at
-  least one *included* tag and none of the *excluded* tags (set in Settings
-  or via the chip buttons). Change the tags and Favorites updates immediately
-  — nothing to "reprocess".
+- A dedicated **Tags** page lists included/excluded tags (with a one-click
+  remove) and lets you type in a brand-new keyword — a person's or country's
+  name, say — to include. A tag/keyword matches an article either because
+  the feed tagged it that way, or because the word literally appears in the
+  title/summary, so a manually-typed name works even if no feed tagged it.
+- **Favorites** = a live filter, not a saved list: articles matching at least
+  one *included* tag/keyword and none of the *excluded* ones. Change them on
+  the Tags page and Favorites updates immediately — nothing to "reprocess".
 - One simple login (single admin account, no public registration).
 - Automatic cleanup: articles older than 10 days (by publish date, not fetch
   date) are deleted every fetch cycle. There's no manual delete — if you
   don't want to read something, just don't click it and move on.
-- Settings page: hide whole categories from your default briefing, manage
-  included/excluded tags.
+- Settings page: hide whole categories from your default briefing.
 - Feed manager: add / edit / pause / delete RSS feeds from the panel.
 
 ## How duplicate detection works
@@ -52,8 +60,10 @@ an LLM-based similarity check for the ones that don't match by words alone.
 ## Translation (DeepSeek)
 
 Set `DEEPSEEK_API_KEY` in `.env`. `app/Http/Controllers/TranslationController.php`
-caps usage at 10 translations/day (tracked in the cache, resets at midnight)
-and caches each article's translation permanently once made, so revisiting an
+caps usage at 10 translations/day total across both the card 🌐 button and the
+modal's full-body button (tracked in the cache, resets at midnight), and
+caches each result permanently once made (`articles.title_fa`/`description_fa`
+for the card, `translation_fa` for the full body), so revisiting an
 already-translated article is free. If the key is missing, the button just
 returns an error instead of failing the whole page.
 
@@ -61,12 +71,20 @@ returns an error instead of failing the whole page.
 
 Tags come from whatever each feed's `<category>` elements contain — quality
 varies by source (some are clean topics like "politics", others are internal
-taxonomy slugs). Settings → "Favorites — included/excluded tags" holds two
-comma-separated lists (`included_tags` / `excluded_tags` in the `settings`
-table, as JSON). The Favorites tab query is: has a tag in the included list,
-and has no tag in the excluded list. If the included list is empty, Favorites
-shows nothing (there's nothing to ask for yet) — the page tells you this and
-links to Settings.
+taxonomy slugs). The **Tags** page (`app/Http/Controllers/TagController.php`)
+holds two lists, `included_tags` / `excluded_tags`, stored as JSON in the
+`settings` table. You can add a brand-new entry there that was never a real
+tag from any feed — a person's or country's name, for example.
+
+A term (from either list) matches an article if **either**: the article has
+a real tag with that exact name, **or** the term appears as text in the
+title or description (`ArticleController::orMatchesTerm()` /
+`whereDoesntMatchTerm()`). That's what makes a manually-typed keyword work —
+it's matched by substring search, not just the feed's own tag metadata.
+
+The Favorites tab query is: matches an included term, and matches no
+excluded term. If the included list is empty, Favorites shows nothing
+(there's nothing to ask for yet) — the page tells you this and links to Tags.
 
 ## Seeded RSS feeds
 
