@@ -24,6 +24,7 @@ class ArticleController extends Controller
 
         $query = Article::query()
             ->with(['feed', 'tags', 'cluster.articles.feed'])
+            ->whereRaw($this->oneArticlePerClusterSql())
             ->whereHas('feed', function ($q) use ($hiddenCategories, $activeCategory) {
                 if ($activeCategory) {
                     $q->where('category', $activeCategory);
@@ -68,6 +69,32 @@ class ArticleController extends Controller
             'showImportantOnly' => $showImportantOnly,
             'lastFetchedAt' => ($max = Feed::max('last_fetched_at')) ? \Illuminate\Support\Carbon::parse($max) : null,
         ]);
+    }
+
+    /**
+     * The same story often gets fetched from 2+ feeds — that's exactly what the
+     * "important" badge is for — but each of those rows is a separate Article, so
+     * without this the briefing showed the same headline once per source. This
+     * picks a single representative row per cluster (preferring one with full
+     * content, then the most recent), and leaves standalone (non-clustered)
+     * articles untouched by grouping each one under its own id.
+     */
+    private function oneArticlePerClusterSql(): string
+    {
+        return <<<'SQL'
+            articles.id IN (
+                SELECT id FROM (
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY COALESCE(article_cluster_id, -id)
+                            ORDER BY (content IS NOT NULL) DESC, published_at DESC, id DESC
+                        ) AS rn
+                    FROM articles
+                ) ranked
+                WHERE rn = 1
+            )
+            SQL;
     }
 
     /**

@@ -52,6 +52,17 @@ ratio (Jaccard similarity, threshold 0.55). Matching articles share an
 `article_clusters` row; once that cluster has 2+ distinct outlets, it's
 flagged `is_important`.
 
+**The briefing shows one card per cluster, not one per article.** Detection
+happening correctly (the ⭐ badge, tooltip, sources count) doesn't by itself
+stop the same story appearing 3 times just because 3 outlets ran it — that's
+`ArticleController::oneArticlePerClusterSql()`: a `ROW_NUMBER() OVER (PARTITION
+BY ...)` SQL filter that keeps exactly one representative row per cluster
+(preferring one with full content, then the most recent), applied before
+category/tag/favorites filtering. A story that got tagged into two different
+categories by two different feeds (e.g. one outlet's IT feed and another's
+Economy feed both ran it) will show under whichever category the chosen
+representative belongs to — not both.
+
 This is intentionally simple and free to run. It will miss duplicates that
 are worded very differently. If that becomes a problem, `RssFetcherService`
 and `DuplicateDetectorService` are the two files to extend — e.g. swapping in
