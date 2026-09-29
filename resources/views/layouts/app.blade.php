@@ -20,6 +20,7 @@
                 <a href="{{ route('feeds.index') }}" class="hover:underline">Feeds</a>
                 <a href="{{ route('tags.index') }}" class="hover:underline">Tags</a>
                 <a href="{{ route('settings.edit') }}" class="hover:underline">Settings</a>
+                <a href="{{ route('api-key.show') }}" class="hover:underline">API</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="text-gray-500 hover:text-gray-800">Logout</button>

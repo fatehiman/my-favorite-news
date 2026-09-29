@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\FeedController;
@@ -27,6 +28,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+    Route::get('/api-key', [ApiKeyController::class, 'show'])->name('api-key.show');
+    Route::post('/api-key/rotate', [ApiKeyController::class, 'rotate'])->name('api-key.rotate');
 
     Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
     Route::post('/tags/set', [TagController::class, 'setTag'])->name('tags.set');

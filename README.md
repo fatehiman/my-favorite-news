@@ -48,6 +48,11 @@ story shows up in 2 or more different outlets. You get one simple
   don't want to read something, just don't click it and move on.
 - Settings page: hide whole categories from your default briefing.
 - Feed manager: add / edit / pause / delete RSS feeds from the panel.
+- **JSON API** for other apps: same filters as the web page (category,
+  Favorites, Important, Unread) plus a date range, 10 items per page by
+  default, an option to mark only the returned page as read, and a "fetch
+  now" call. The key is on the **API** menu page, where you can also rotate
+  it. Full reference: [api-usage.md](api-usage.md).
 
 ## How duplicate detection works
 
@@ -63,7 +68,7 @@ flagged `is_important`.
 **The briefing shows one card per cluster, not one per article.** Detection
 happening correctly (the ⭐ badge, tooltip, sources count) doesn't by itself
 stop the same story appearing 3 times just because 3 outlets ran it — that's
-`ArticleController::oneArticlePerClusterSql()`: a `ROW_NUMBER() OVER (PARTITION
+`ArticleFilter::oneArticlePerClusterSql()`: a `ROW_NUMBER() OVER (PARTITION
 BY ...)` SQL filter that keeps exactly one representative row per cluster
 (preferring one with full content, then the most recent), applied before
 category/tag/favorites filtering. A story that got tagged into two different
@@ -97,7 +102,7 @@ tag from any feed — a person's or country's name, for example.
 
 A term (from either list) matches an article if **either**: the article has
 a real tag with that exact name, **or** the term appears as text in the
-title or description (`ArticleController::orMatchesTerm()` /
+title or description (`ArticleFilter::orMatchesTerm()` /
 `whereDoesntMatchTerm()`). That's what makes a manually-typed keyword work —
 it's matched by substring search, not just the feed's own tag metadata.
 
@@ -115,6 +120,16 @@ at all, even though a Fox member of the same cluster had some.
 Mark-read, Mark all as read, the 🌐 translate button, and the tag chip +/− buttons are all
 AJAX (`fetch`, no page reload) — clicking any of them while scrolled deep
 into a long list doesn't reset your scroll position.
+
+## API
+
+`/api/v1/articles`, `/api/v1/fetch-now` and `/api/v1/status`, authenticated
+with a per-user API key header (`X-API-Key` or `Authorization: Bearer`). The
+web page and the API build their query with the same class,
+`app/Services/ArticleFilter.php`, so a filter change there changes both.
+Read state is global (one `articles.is_read` column), so what the API marks
+read is also read on the web. See [api-usage.md](api-usage.md) for arguments,
+responses and examples.
 
 ## Seeded RSS feeds
 
