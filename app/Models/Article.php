@@ -50,6 +50,27 @@ class Article extends Model
     }
 
     /**
+     * Read state is per story, not per outlet: marking a card read marks every
+     * article in its cluster. Otherwise, when another member of the cluster
+     * later becomes the shown card, the story would look unread again.
+     * (DuplicateDetectorService also marks a new article read when it joins
+     * an already-read cluster.) Returns the number of rows changed.
+     */
+    public static function markStoriesRead(iterable $ids): int
+    {
+        $ids = collect($ids)->values();
+        if ($ids->isEmpty()) {
+            return 0;
+        }
+
+        $clusterIds = static::whereIn('id', $ids)->whereNotNull('article_cluster_id')->pluck('article_cluster_id');
+
+        return static::where('is_read', false)
+            ->where(fn ($q) => $q->whereIn('id', $ids)->orWhereIn('article_cluster_id', $clusterIds))
+            ->update(['is_read' => true]);
+    }
+
+    /**
      * Tags are attached per feed row, but only ~3 of our sources actually supply
      * RSS <category> data. When this article is the representative of a cluster,
      * show tags pooled from every member — a story a Fox feed tagged shouldn't

@@ -111,7 +111,15 @@ class DuplicateDetectorService
 
     private function attachToCluster(Article $article, int $clusterId): void
     {
-        $article->update(['article_cluster_id' => $clusterId]);
+        // Read state is per story: if the user already read this story from
+        // another outlet, this new copy is read too — it must not bring the
+        // story back as unread (see Article::markStoriesRead()).
+        $storyAlreadyRead = Article::where('article_cluster_id', $clusterId)->where('is_read', true)->exists();
+
+        $article->update([
+            'article_cluster_id' => $clusterId,
+            'is_read' => $article->is_read || $storyAlreadyRead,
+        ]);
 
         $cluster = ArticleCluster::find($clusterId);
         $sourcesCount = Article::query()

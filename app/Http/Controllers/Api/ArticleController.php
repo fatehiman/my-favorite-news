@@ -42,13 +42,16 @@ class ArticleController extends Controller
             'to' => $this->parseDate($validated['to'] ?? null, endOfDay: true),
         ])->paginate((int) ($validated['per_page'] ?? self::DEFAULT_PER_PAGE))->withQueryString();
 
+        // Marking is per story (all outlets' copies), see Article::markStoriesRead().
+        // marked_read counts cards (stories) on this page, not database rows.
         // mark_read only touches the page being returned — with unread=1, the
         // next identical call (page 1 again) then returns the next batch.
         // The items in this response still show is_read as it was before.
         $marked = 0;
         if ($request->boolean('mark_read')) {
             $ids = $articles->getCollection()->where('is_read', false)->pluck('id');
-            $marked = $ids->isEmpty() ? 0 : Article::whereIn('id', $ids)->update(['is_read' => true]);
+            Article::markStoriesRead($ids);
+            $marked = $ids->count();
         }
 
         return ArticleResource::collection($articles)->additional([

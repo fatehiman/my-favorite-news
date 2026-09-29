@@ -113,12 +113,15 @@ Things to know:
   returns the same items again (they are still in the list).
 - In the response, `is_read` shows the state **before** this call. So with
   `unread=1` every item shows `false`. `meta.marked_read` tells you how many
-  items this call marked.
+  cards this call marked.
 - Read state is **shared** with the web page. What the API marks as read also
   looks read on the web, and the other way around.
-- Only the shown card of a story is marked (the same as the web "Mark read").
-  If a new outlet later reports the same story, that story can show up as
-  unread again.
+- Read state is **per story**, not per outlet. Marking a card read marks
+  every outlet's copy of that story. If another outlet reports the same
+  story later, its copy is saved as read too, so a story you read never
+  comes back as unread. (The web "Mark read" works the same way.)
+- `meta.marked_read` counts **cards** (stories) in this response, not
+  database rows.
 
 ### Response
 

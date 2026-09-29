@@ -76,6 +76,15 @@ categories by two different feeds (e.g. one outlet's IT feed and another's
 Economy feed both ran it) will show under whichever category the chosen
 representative belongs to — not both.
 
+**Read state is per story, not per article.** The shown card can change: a
+newer copy from another outlet becomes the representative. So marking only
+the shown row read would make an already-read story look unread again. To
+prevent that, `Article::markStoriesRead()` marks every article in the
+cluster (used by Mark read, Mark all as read, Read here, and API
+`mark_read`). Also, `DuplicateDetectorService::attachToCluster()` saves a new
+article as read when it joins a cluster that is already read. Once you read
+a story, it stays read — even if it becomes ⭐ important later.
+
 This is intentionally simple and free to run. It will miss duplicates that
 are worded very differently. If that becomes a problem, `RssFetcherService`
 and `DuplicateDetectorService` are the two files to extend — e.g. swapping in

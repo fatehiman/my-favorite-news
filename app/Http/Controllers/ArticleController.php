@@ -50,7 +50,7 @@ class ArticleController extends Controller
 
     public function markRead(Request $request, Article $article): RedirectResponse|JsonResponse
     {
-        $article->update(['is_read' => true]);
+        Article::markStoriesRead([$article->id]);
 
         if ($request->wantsJson()) {
             return response()->json(['ok' => true]);
@@ -70,14 +70,14 @@ class ArticleController extends Controller
             'ids.*' => ['integer'],
         ])['ids'];
 
-        $count = Article::whereIn('id', $ids)->where('is_read', false)->update(['is_read' => true]);
+        $count = Article::markStoriesRead($ids);
 
         return response()->json(['ok' => true, 'marked' => $count]);
     }
 
     public function content(Article $article): JsonResponse
     {
-        $article->update(['is_read' => true]);
+        Article::markStoriesRead([$article->id]);
 
         if ($article->content) {
             return response()->json(['content' => $article->content]);
