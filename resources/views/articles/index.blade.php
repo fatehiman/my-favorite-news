@@ -154,6 +154,18 @@
     @endforelse
 </div>
 
+@php $unreadIdsOnPage = $articles->getCollection()->where('is_read', false)->pluck('id')->values(); @endphp
+@if ($unreadIdsOnPage->isNotEmpty())
+    <div class="mt-4 text-center">
+        <button type="button" id="mark-all-read-btn"
+                onclick="markAllReadAjax({{ Illuminate\Support\Js::from($unreadIdsOnPage) }}, this)"
+                title="Mark every story on this page as read (other pages are not changed)"
+                class="text-sm text-gray-600 border rounded-full px-4 py-1.5 bg-white hover:bg-gray-100">
+            ✓ Mark all as read
+        </button>
+    </div>
+@endif
+
 <div class="mt-6">
     {{ $articles->links() }}
 </div>

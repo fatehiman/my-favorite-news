@@ -17,6 +17,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::middleware('auth')->group(function () {
     Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
     Route::post('/articles/fetch-now', [ArticleController::class, 'triggerFetch'])->name('articles.fetch-now');
+    Route::post('/articles/read-many', [ArticleController::class, 'markManyRead'])->name('articles.read-many');
     Route::post('/articles/{article}/read', [ArticleController::class, 'markRead'])->name('articles.read');
     Route::get('/articles/{article}/content', [ArticleController::class, 'content'])->name('articles.content');
     Route::post('/articles/{article}/translate', [TranslationController::class, 'translate'])->name('articles.translate');

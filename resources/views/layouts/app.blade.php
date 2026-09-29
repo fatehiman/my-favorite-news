@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'My Favorite News')</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen">
@@ -160,6 +163,28 @@
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
             }).catch(() => {});
+        }
+
+        function markAllReadAjax(ids, btn) {
+            btn.disabled = true;
+            fetch('/articles/read-many', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids }),
+            })
+                .then(r => { if (!r.ok) throw new Error(); })
+                .then(() => {
+                    ids.forEach(id => {
+                        document.getElementById(`card-${id}`)?.classList.add('opacity-60');
+                        document.getElementById(`mark-read-btn-${id}`)?.remove();
+                    });
+                    btn.remove();
+                })
+                .catch(() => { btn.disabled = false; alert('Could not mark as read. Try again.'); });
         }
 
         function setTagAjax(name, action, btn) {

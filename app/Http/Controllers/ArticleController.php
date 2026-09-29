@@ -133,6 +133,22 @@ class ArticleController extends Controller
         return back();
     }
 
+    /**
+     * "Mark all as read" under the last card: the page sends the ids of the cards
+     * it's showing, so only that page is marked — not every article in the filter.
+     */
+    public function markManyRead(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids' => ['required', 'array', 'max:100'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $count = Article::whereIn('id', $ids)->where('is_read', false)->update(['is_read' => true]);
+
+        return response()->json(['ok' => true, 'marked' => $count]);
+    }
+
     public function content(Article $article): JsonResponse
     {
         $article->update(['is_read' => true]);

@@ -19,6 +19,9 @@ story shows up in 2 or more different outlets. You get one simple
   Favorites, so you can build up your included/excluded list as you browse.
 - **Unread** toggle (●), left of Important — same combining behavior, so
   "Important + Unread" (or any other combo) works together.
+- **Mark all as read** button under the last card: marks only the cards on
+  the current page as read (the page sends their ids), not every article in
+  the current filter. It only shows when the page has unread cards.
 - Pulls full article body when a feed actually provides one (`content:encoded`,
   common on WordPress-based feeds); a "Read here" button opens it in a
   scrollable modal, no images. Many outlets (NPR, NBC, CBS, ABC) only publish
@@ -109,7 +112,7 @@ supply RSS `<category>` data — without pooling, a cluster whose chosen
 representative happened to be NBC/CBS/ABC/NPR/The Hill would show no tags
 at all, even though a Fox member of the same cluster had some.
 
-Mark-read, the 🌐 translate button, and the tag chip +/− buttons are all
+Mark-read, Mark all as read, the 🌐 translate button, and the tag chip +/− buttons are all
 AJAX (`fetch`, no page reload) — clicking any of them while scrolled deep
 into a long list doesn't reset your scroll position.
 
@@ -182,3 +185,7 @@ drives all of this:
 
 Laravel 13, SQLite (no separate DB server needed), Blade + Tailwind (via CDN,
 no JS build step). Deliberately light for small/shared hosting.
+
+Favicon: `public/favicon.svg` is the source (a newspaper page with an amber
+headline bar). `favicon.ico` and `apple-touch-icon.png` were rendered from
+the same shapes with Python/Pillow — redraw them if you change the SVG.
